@@ -1,0 +1,577 @@
+from django.core.management.base import BaseCommand
+from curriculum.models import Level, Question, TestCase, Hint
+
+QUESTIONS = {
+    'beginner': [
+        {
+            'title': 'Hello World',
+            'description': 'Print the text `Hello, World!` to the screen.',
+            'starter_code': '# Print Hello, World!\n',
+            'test_cases': [('', 'Hello, World!')],
+            'hints': ['Use the print() function.', 'The exact text must match including comma and exclamation mark.'],
+        },
+        {
+            'title': 'Sum of Two Numbers',
+            'description': 'Read two integers on separate lines and print their sum.',
+            'starter_code': 'a = int(input())\nb = int(input())\n# Print the sum\n',
+            'test_cases': [('3\n5', '8'), ('10\n20', '30'), ('-4\n7', '3')],
+            'hints': ['Read each number with input() and convert to int.', 'Use + to add them.'],
+        },
+        {
+            'title': 'Even or Odd',
+            'description': 'Read a number and print "Even" if it is even, or "Odd" if it is odd.',
+            'starter_code': 'n = int(input())\n# Check even or odd\n',
+            'test_cases': [('4', 'Even'), ('7', 'Odd'), ('0', 'Even')],
+            'hints': ['Use the modulo operator %.', 'n % 2 == 0 means even.'],
+        },
+        {
+            'title': 'Repeat String',
+            'description': 'Read a string and a number n. Print the string repeated n times.',
+            'starter_code': 's = input()\nn = int(input())\n# Print s repeated n times\n',
+            'test_cases': [('hi\n3', 'hihihi'), ('ab\n2', 'abab')],
+            'hints': ['Strings can be multiplied in Python: "ab" * 3 gives "ababab"'],
+        },
+        {
+            'title': 'List Sum',
+            'description': 'Given space-separated numbers on one line, print their total sum.',
+            'starter_code': 'nums = list(map(int, input().split()))\n# Print the sum\n',
+            'test_cases': [('1 2 3 4 5', '15'), ('10 20 30', '60')],
+            'hints': ['Use the built-in sum() function.'],
+        },
+        {
+            'title': 'Reverse a String',
+            'description': 'Read a string and print it reversed.',
+            'starter_code': 's = input()\n# Print s reversed\n',
+            'test_cases': [('hello', 'olleh'), ('Python', 'nohtyP')],
+            'hints': ['Python slicing with step -1 reverses a string: s[::-1]'],
+        },
+        {
+            'title': 'Count Vowels',
+            'description': 'Count how many vowels (a,e,i,o,u) are in the input string (case insensitive).',
+            'starter_code': 's = input().lower()\n# Count and print vowel count\n',
+            'test_cases': [('hello', '2'), ('Python', '1'), ('aeiou', '5')],
+            'hints': ['Loop through each character and check if it is in "aeiou".'],
+        },
+        {
+            'title': 'FizzBuzz',
+            'description': 'Print numbers 1 to N. For multiples of 3 print "Fizz", multiples of 5 print "Buzz", both print "FizzBuzz".',
+            'starter_code': 'n = int(input())\nfor i in range(1, n+1):\n    pass  # your code here\n',
+            'test_cases': [('5', '1\n2\nFizz\n4\nBuzz'), ('15', '1\n2\nFizz\n4\nBuzz\nFizz\n7\n8\nFizz\nBuzz\n11\nFizz\n13\n14\nFizzBuzz')],
+            'hints': ['Check divisibility by 15 first, then 3, then 5.'],
+        },
+        {
+            'title': 'Factorial',
+            'description': 'Calculate and print the factorial of N (0 <= N <= 10).',
+            'starter_code': 'n = int(input())\n# Calculate factorial\n',
+            'test_cases': [('5', '120'), ('0', '1'), ('3', '6')],
+            'hints': ['Factorial of n = n * (n-1) * ... * 1', 'You can use a loop or recursion.'],
+        },
+        {
+            'title': 'Palindrome Check',
+            'description': 'Check if a word is a palindrome. Print "Yes" or "No".',
+            'starter_code': 's = input()\n# Check palindrome\n',
+            'test_cases': [('racecar', 'Yes'), ('hello', 'No'), ('madam', 'Yes')],
+            'hints': ['Compare the string to its reverse.'],
+        },
+        {
+    'title': 'Maximum in List',
+    'description': 'Read a list of space-separated integers and print the largest value.',
+    'starter_code': 'nums = list(map(int, input().split()))\n# Print the maximum\n',
+    'test_cases': [('3 1 4 1 5 9 2', '9'), ('10 20 30', '30')],
+        'hints': ['Use the built-in max() function.'],
+    },
+    {
+        'title': 'Minimum in List',
+        'description': 'Read space-separated integers and print the smallest value.',
+        'starter_code': 'nums = list(map(int, input().split()))\n# Print the minimum\n',
+        'test_cases': [('3 1 4 1 5', '1'), ('10 20 30', '10')],
+        'hints': ['Use the built-in min() function.'],
+    },
+    {
+        'title': 'Count Word Occurrences',
+        'description': 'Given a sentence and a word (on separate lines), print how many times the word appears (case insensitive).',
+        'starter_code': 'sentence = input().lower()\nword = input().lower()\n# Count and print\n',
+        'test_cases': [('the cat sat on the mat\nthe', '2'), ('hello world\nbye', '0')],
+        'hints': ['Use sentence.split() to get words, then count matches.'],
+    },
+    {
+        'title': 'Celsius to Fahrenheit',
+        'description': 'Read a temperature in Celsius and print it in Fahrenheit. Formula: F = C * 9/5 + 32. Print as a float with 1 decimal place.',
+        'starter_code': 'c = float(input())\n# Convert and print\n',
+        'test_cases': [('100', '212.0'), ('0', '32.0'), ('37', '98.6')],
+        'hints': ['Use round() or f-string formatting: f"{value:.1f}"'],
+    },
+    {
+        'title': 'Digit Sum',
+        'description': 'Read a positive integer and print the sum of its digits.',
+        'starter_code': 'n = input()\n# Sum the digits\n',
+        'test_cases': [('123', '6'), ('9999', '36'), ('0', '0')],
+        'hints': ['Iterate over the string characters and convert each to int.'],
+    },
+    {
+        'title': 'Count Uppercase Letters',
+        'description': 'Read a string and print how many uppercase letters it contains.',
+        'starter_code': 's = input()\n# Count uppercase letters\n',
+        'test_cases': [('Hello World', '2'), ('PYTHON', '6'), ('hello', '0')],
+        'hints': ['Use s.isupper() on each character, or sum(1 for c in s if c.isupper()).'],
+    },
+    {
+        'title': 'Remove Duplicates',
+        'description': 'Read space-separated integers and print them with duplicates removed, keeping original order.',
+        'starter_code': 'nums = input().split()\n# Remove duplicates preserving order\n',
+        'test_cases': [('1 2 2 3 1 4', '1 2 3 4'), ('5 5 5', '5')],
+        'hints': ['Use a set to track seen values, but iterate in order.', 'dict.fromkeys() preserves order in Python 3.7+.'],
+    },
+    {
+        'title': 'Power Without Operator',
+        'description': 'Read base and exponent (both non-negative integers). Print base^exponent without using ** or pow().',
+        'starter_code': 'base = int(input())\nexp = int(input())\n# Calculate power using a loop\n',
+        'test_cases': [('2\n10', '1024'), ('3\n3', '27'), ('5\n0', '1')],
+        'hints': ['Multiply base by itself exp times using a loop.', 'Start result = 1, then multiply in a loop.'],
+    },
+    {
+        'title': 'Merge Two Lists',
+        'description': 'Read two lines of space-separated integers. Print them merged and sorted.',
+        'starter_code': 'a = list(map(int, input().split()))\nb = list(map(int, input().split()))\n# Merge and sort\n',
+        'test_cases': [('1 3 5\n2 4 6', '1 2 3 4 5 6'), ('10 20\n5 15', '5 10 15 20')],
+        'hints': ['Combine the lists with + then use sorted().'],
+    },
+    {
+        'title': 'Simple Calculator',
+        'description': 'Read two numbers and an operator (+, -, *, /) on separate lines. Print the result. For division, print result with 2 decimal places.',
+        'starter_code': 'a = float(input())\nb = float(input())\nop = input()\n# Calculate result\n',
+        'test_cases': [('10\n3\n+', '13.0'), ('10\n3\n/', '3.33'), ('4\n5\n*', '20.0')],
+        'hints': ['Use if/elif to handle each operator.', 'For division output use f"{result:.2f}".'],
+    },
+    {
+        'title': 'String Compression',
+        'description': 'Compress a string by replacing consecutive repeated characters with the character followed by its count (e.g. "aaabb" → "a3b2"). If a character appears once, just print it.',
+        'starter_code': 's = input()\n# Compress the string\n',
+        'test_cases': [('aaabb', 'a3b2'), ('abcd', 'abcd'), ('aaaa', 'a4')],
+        'hints': ['Loop through the string tracking current char and its count.'],
+    },
+    {
+        'title': 'Two-Dimensional List Sum',
+        'description': 'Read N and M on the first line, then N rows of M integers. Print the sum of all elements.',
+        'starter_code': 'n, m = map(int, input().split())\ntotal = 0\nfor _ in range(n):\n    row = list(map(int, input().split()))\n    # Add to total\nprint(total)\n',
+        'test_cases': [('2 3\n1 2 3\n4 5 6', '21'), ('1 1\n99', '99')],
+        'hints': ['Use sum(row) inside the loop and accumulate.'],
+    },
+    {
+        'title': 'Find Missing Number',
+        'description': 'Given a list of N-1 distinct integers from 1 to N (space-separated), find and print the missing number.',
+        'starter_code': 'nums = list(map(int, input().split()))\n# Find the missing number\n',
+        'test_cases': [('1 2 4 5', '3'), ('2 3 4 5', '1'), ('1 2 3 4', '5')],
+        'hints': ['The expected sum of 1..N is N*(N+1)//2. Subtract the actual sum.'],
+    },
+    {
+        'title': 'Rotate List',
+        'description': 'Read space-separated integers and a rotation count K (on separate lines). Print the list rotated right by K positions.',
+        'starter_code': 'nums = list(map(int, input().split()))\nk = int(input())\n# Rotate right by k\n',
+        'test_cases': [('1 2 3 4 5\n2', '4 5 1 2 3'), ('1 2 3\n1', '3 1 2')],
+        'hints': ['Slicing: nums[-k:] + nums[:-k]', 'Use k = k % len(nums) to handle k > length.'],
+    },
+    {
+        'title': 'Caesar Cipher',
+        'description': 'Read a lowercase string and a shift number. Print the string with each letter shifted by that amount (wraps around the alphabet).',
+        'starter_code': 's = input()\nshift = int(input())\n# Apply Caesar cipher\n',
+        'test_cases': [('hello\n3', 'khoor'), ('xyz\n3', 'abc'), ('abc\n0', 'abc')],
+        'hints': ['Use (ord(c) - ord("a") + shift) % 26 + ord("a").', 'chr() converts an integer back to a character.'],
+    },
+    ],
+    'intermediate': [
+        {
+            'title': 'Two Sum',
+            'description': 'Given a list of integers and a target T (on separate lines), find two indices where values add up to T. Print indices separated by a space.',
+            'starter_code': 'nums = list(map(int, input().split()))\ntarget = int(input())\n# Find two indices\n',
+            'test_cases': [('2 7 11 15\n9', '0 1'), ('3 2 4\n6', '1 2')],
+            'hints': ['A dictionary makes this O(n).', 'For each number, check if (target - number) is already in your dict.'],
+        },
+        {
+            'title': 'Binary Search',
+            'description': 'Implement binary search on a sorted list. Print the index of the target or -1 if not found.',
+            'starter_code': 'nums = list(map(int, input().split()))\ntarget = int(input())\n# Binary search\n',
+            'test_cases': [('1 3 5 7 9\n5', '2'), ('1 3 5 7 9\n4', '-1')],
+            'hints': ['Track low and high pointers.', 'mid = (low + high) // 2'],
+        },
+        {
+            'title': 'Fibonacci Memoized',
+            'description': 'Print the Nth Fibonacci number efficiently using memoization. F(0)=0, F(1)=1.',
+            'starter_code': 'n = int(input())\n# Efficient Fibonacci\n',
+            'test_cases': [('10', '55'), ('0', '0'), ('20', '6765')],
+            'hints': ['Cache previously computed values in a dictionary.'],
+        },
+        {
+            'title': 'Anagram Check',
+            'description': 'Given two words on separate lines, print "True" if they are anagrams, "False" otherwise.',
+            'starter_code': 'a = input()\nb = input()\n# Check anagram\n',
+            'test_cases': [('listen\nsilent', 'True'), ('hello\nworld', 'False')],
+            'hints': ['Sorting both strings and comparing works well.'],
+        },
+        {
+            'title': 'Word Frequency',
+            'description': 'Count word frequencies in a sentence. Print each unique word and its count sorted alphabetically.',
+            'starter_code': 'sentence = input().lower()\n# Count frequencies\n',
+            'test_cases': [('the cat sat on the mat', 'cat 1\nmat 1\non 1\nsat 1\nthe 2')],
+            'hints': ['Use a dictionary or collections.Counter.', 'Sort the result before printing.'],
+        },
+        {
+            'title': 'Stack Simulation',
+            'description': 'Simulate a stack. Read N operations: PUSH x or POP. Print popped values or "Empty" if stack is empty.',
+            'starter_code': 'n = int(input())\nstack = []\nfor _ in range(n):\n    op = input().split()\n    pass\n',
+            'test_cases': [('4\nPUSH 1\nPUSH 2\nPOP\nPOP', '2\n1'), ('2\nPOP\nPUSH 5', 'Empty')],
+            'hints': ['Use list.append() for push and list.pop() for pop.'],
+        },
+        {
+            'title': 'Matrix Transpose',
+            'description': 'Given N and M on the first line, then N rows of M integers, print the transposed matrix.',
+            'starter_code': 'n, m = map(int, input().split())\nmatrix = [list(map(int, input().split())) for _ in range(n)]\n# Transpose and print\n',
+            'test_cases': [('2 3\n1 2 3\n4 5 6', '1 4\n2 5\n3 6')],
+            'hints': ['Use zip(*matrix) to transpose.'],
+        },
+        {
+            'title': 'Longest Common Prefix',
+            'description': 'Given N strings (first line is N), find and print the longest common prefix. Print empty line if none.',
+            'starter_code': 'n = int(input())\nwords = [input() for _ in range(n)]\n# Find LCP\n',
+            'test_cases': [('3\nflower\nflow\nflight', 'fl'), ('2\ndog\nracecar', '')],
+            'hints': ['Zip the words together and check character by character.'],
+        },
+        {
+            'title': 'Prime Sieve',
+            'description': 'Print all prime numbers up to N using the Sieve of Eratosthenes, space-separated.',
+            'starter_code': 'n = int(input())\n# Sieve of Eratosthenes\n',
+            'test_cases': [('20', '2 3 5 7 11 13 17 19'), ('10', '2 3 5 7')],
+            'hints': ['Start with a boolean list of True, mark composites as False.'],
+        },
+        {
+            'title': 'Flatten Nested List',
+            'description': 'Given a Python list literal with nesting (e.g. [1,[2,3]]), print all integers space-separated.',
+            'starter_code': 'import ast\ndata = ast.literal_eval(input())\n# Flatten and print\n',
+            'test_cases': [('[1,[2,3],[4,[5]]]', '1 2 3 4 5'), ('[[1,2],[3,[4,5]]]', '1 2 3 4 5')],
+            'hints': ['Use recursion — if an element is a list, recurse into it.'],
+        },
+        {
+    'title': 'Sliding Window Maximum',
+    'description': 'Given space-separated integers and window size K (on separate lines), print the maximum of each window of size K.',
+    'starter_code': 'nums = list(map(int, input().split()))\nk = int(input())\n# Sliding window maximum\n',
+    'test_cases': [('1 3 -1 -3 5 3 6 7\n3', '3 3 5 5 6 7'), ('1 2 3\n1', '1 2 3')],
+    'hints': ['Use collections.deque for an O(n) solution.', 'Maintain indices of useful elements in decreasing order.'],
+    },
+    {
+        'title': 'Group Anagrams',
+        'description': 'Read N words (first line N, then one word per line). Group anagrams together — print each group on one line, words sorted, groups sorted by first word.',
+        'starter_code': 'n = int(input())\nwords = [input() for _ in range(n)]\n# Group anagrams\n',
+        'test_cases': [('6\neat\ntea\ntan\nate\nnat\nbat', 'ate eat tea\nbat\nant nat tan')],
+        'hints': ['Use sorted(word) as a dictionary key to group anagrams.'],
+    },
+    {
+        'title': 'Validate Balanced Brackets',
+        'description': 'Read a string of brackets ( ) [ ] { }. Print True if balanced, False otherwise.',
+        'starter_code': 's = input()\n# Validate brackets\n',
+        'test_cases': [('()[]{}'  , 'True'), ('(]', 'False'), ('{[()]}', 'True'), ('([)]', 'False')],
+        'hints': ['Use a stack.', 'Push opening brackets, pop and match when you see a closing bracket.'],
+    },
+    {
+        'title': 'Spiral Matrix',
+        'description': 'Given N (matrix size), print the numbers 1 to N*N arranged in a spiral, each row space-separated.',
+        'starter_code': 'n = int(input())\n# Build and print spiral matrix\n',
+        'test_cases': [('3', '1 2 3\n8 9 4\n7 6 5'), ('1', '1')],
+        'hints': ['Simulate the spiral: right → down → left → up, shrinking boundaries each time.'],
+    },
+    {
+        'title': 'Longest Substring Without Repeating',
+        'description': 'Read a string and print the length of the longest substring without repeating characters.',
+        'starter_code': 's = input()\n# Find longest substring\n',
+        'test_cases': [('abcabcbb', '3'), ('bbbbb', '1'), ('pwwkew', '3')],
+        'hints': ['Use a sliding window with a set.', 'Expand right, shrink left when duplicate found.'],
+    },
+    {
+        'title': 'Number of Islands',
+        'description': 'Read an N×M grid of 0s and 1s (first line N M, then N rows). Count connected groups of 1s (islands). Connections are horizontal/vertical only.',
+        'starter_code': 'n, m = map(int, input().split())\ngrid = [list(input().split()) for _ in range(n)]\n# Count islands\n',
+        'test_cases': [('4 5\n1 1 0 0 0\n1 1 0 0 0\n0 0 1 0 0\n0 0 0 1 1', '3')],
+        'hints': ['Use DFS or BFS to explore each island.', 'Mark visited cells as 0 to avoid revisiting.'],
+    },
+    {
+        'title': 'Roman to Integer',
+        'description': 'Convert a Roman numeral string to an integer.',
+        'starter_code': 's = input()\n# Convert Roman to integer\n',
+        'test_cases': [('III', '3'), ('LVIII', '58'), ('MCMXCIV', '1994')],
+        'hints': ['Map each symbol to its value.', 'If a smaller value appears before a larger one, subtract it instead of adding.'],
+    },
+    {
+        'title': 'Integer to Roman',
+        'description': 'Convert a positive integer (1–3999) to a Roman numeral string.',
+        'starter_code': 'n = int(input())\n# Convert to Roman numeral\n',
+        'test_cases': [('3', 'III'), ('58', 'LVIII'), ('1994', 'MCMXCIV')],
+        'hints': ['Use a list of (value, symbol) pairs from largest to smallest.', 'Greedily subtract the largest value that fits.'],
+    },
+    {
+        'title': 'Subarray Sum Equals K',
+        'description': 'Given space-separated integers and a target K (on separate lines), print the count of subarrays that sum to K.',
+        'starter_code': 'nums = list(map(int, input().split()))\nk = int(input())\n# Count subarrays\n',
+        'test_cases': [('1 1 1\n2', '2'), ('1 2 3\n3', '2')],
+        'hints': ['Use a prefix sum + hashmap for O(n).', 'Count how many times (prefix_sum - k) has appeared before.'],
+    },
+    {
+        'title': 'Decode Ways',
+        'description': 'A message is encoded as digits (A=1, B=2, ..., Z=26). Given a digit string, print the number of ways to decode it.',
+        'starter_code': 's = input()\n# Count decode ways using DP\n',
+        'test_cases': [('12', '2'), ('226', '3'), ('06', '0')],
+        'hints': ['Use DP where dp[i] = ways to decode s[:i].', 'A single digit decodes if it is 1-9; two digits decode if 10-26.'],
+    },
+    {
+        'title': 'Merge Intervals',
+        'description': 'Read N intervals (first line N, then each interval as "start end"). Merge overlapping intervals and print sorted merged intervals one per line.',
+        'starter_code': 'n = int(input())\nintervals = [list(map(int, input().split())) for _ in range(n)]\n# Merge intervals\n',
+        'test_cases': [('4\n1 3\n2 6\n8 10\n15 18', '1 6\n8 10\n15 18'), ('2\n1 4\n4 5', '1 5')],
+        'hints': ['Sort by start time.', 'If current start <= previous end, merge by extending the end.'],
+    },
+    {
+        'title': 'Valid Sudoku Row',
+        'description': 'Read 9 space-separated integers (1-9). Print True if they form a valid Sudoku row (no repeats), False otherwise.',
+        'starter_code': 'row = list(map(int, input().split()))\n# Validate Sudoku row\n',
+        'test_cases': [('1 2 3 4 5 6 7 8 9', 'True'), ('1 2 3 4 5 6 7 8 8', 'False')],
+        'hints': ['A valid row has exactly the digits 1–9 with no repeats.', 'Compare len(set(row)) == 9 and all values 1-9.'],
+    },
+    {
+        'title': 'Pascal Triangle Row',
+        'description': 'Read N and print the Nth row of Pascal\'s triangle (0-indexed) as space-separated integers.',
+        'starter_code': 'n = int(input())\n# Print nth row of Pascal triangle\n',
+        'test_cases': [('0', '1'), ('3', '1 3 3 1'), ('5', '1 5 10 10 5 1')],
+        'hints': ['Each element is C(n,k) = n! / (k! * (n-k)!).', 'Or build iteratively: start with [1] and compute each row from the previous.'],
+    },
+    {
+        'title': 'Product of Array Except Self',
+        'description': 'Read space-separated integers. Print a new list where each element is the product of all other elements, without using division.',
+        'starter_code': 'nums = list(map(int, input().split()))\n# Product except self\n',
+        'test_cases': [('1 2 3 4', '24 12 8 6'), ('2 3 4', '12 8 6')],
+        'hints': ['Build prefix products left-to-right, then multiply by suffix products right-to-left.'],
+    },
+    {
+        'title': 'Kth Largest Element',
+        'description': 'Read space-separated integers and K. Print the Kth largest element.',
+        'starter_code': 'nums = list(map(int, input().split()))\nk = int(input())\n# Find kth largest\n',
+        'test_cases': [('3 2 1 5 6 4\n2', '5'), ('3 2 3 1 2 4 5 5 6\n4', '4')],
+        'hints': ['Sorting is the simplest: sorted(nums)[-k].', 'For better performance, use heapq.nlargest(k, nums)[-1].'],
+    },
+
+
+    ],
+    'advanced': [
+        {
+            'title': 'LRU Cache',
+            'description': 'Implement an LRU cache. First line: capacity. Then operations: GET k or PUT k v. Print get results or "None".',
+            'starter_code': 'from collections import OrderedDict\ncapacity = int(input())\n# Implement LRU Cache\n',
+            'test_cases': [('2\nPUT 1 1\nPUT 2 2\nGET 1\nPUT 3 3\nGET 2', '1\nNone')],
+            'hints': ['OrderedDict maintains insertion order and supports move_to_end().'],
+        },
+        {
+            'title': 'BFS Shortest Path',
+            'description': 'Find shortest path in unweighted graph. First line: N nodes M edges. Next M lines: edges u v. Last line: start end. Print distance or -1.',
+            'starter_code': 'from collections import deque\nn, m = map(int, input().split())\ngraph = {i: [] for i in range(n)}\nfor _ in range(m):\n    u, v = map(int, input().split())\n    graph[u].append(v); graph[v].append(u)\nstart, end = map(int, input().split())\n# BFS\n',
+            'test_cases': [('4 4\n0 1\n1 2\n2 3\n0 3\n0 3', '1')],
+            'hints': ['Use a deque for BFS. Track visited and distances.'],
+        },
+        {
+            'title': 'Coin Change DP',
+            'description': 'Given coin denominations (space-separated) and an amount A, find minimum coins needed. Print -1 if impossible.',
+            'starter_code': 'coins = list(map(int, input().split()))\namount = int(input())\n# DP solution\n',
+            'test_cases': [('1 5 6 9\n11', '2'), ('2\n3', '-1')],
+            'hints': ['dp[i] = min coins for amount i. Initialize dp[0]=0, rest=infinity.'],
+        },
+        {
+            'title': 'Retry Decorator',
+            'description': 'Write a decorator @retry(n) that retries a function up to n times on exception. The provided flaky() function fails twice then succeeds. Print its result.',
+            'starter_code': 'import functools\n\ndef retry(n):\n    # implement decorator\n    pass\n\ncall_count = 0\n@retry(3)\ndef flaky():\n    global call_count\n    call_count += 1\n    if call_count < 3:\n        raise ValueError("not yet")\n    return "success"\n\nprint(flaky())\n',
+            'test_cases': [('', 'success')],
+            'hints': ['The decorator should catch exceptions and retry in a loop.', 'Use functools.wraps to preserve the function name.'],
+        },
+        {
+            'title': 'Merge K Sorted Lists',
+            'description': 'Given K sorted lists (first line K, then one list per line), merge and print sorted result space-separated.',
+            'starter_code': 'import heapq\nk = int(input())\nlists = [list(map(int, input().split())) for _ in range(k)]\n# Merge K sorted lists\n',
+            'test_cases': [('3\n1 4 7\n2 5 8\n3 6 9', '1 2 3 4 5 6 7 8 9')],
+            'hints': ['Use a min-heap. Push (value, list_index, element_index) tuples.'],
+        },
+        {
+            'title': 'Trie Implementation',
+            'description': 'Implement a Trie. Read N operations: INSERT word or SEARCH word. Print True/False for each SEARCH.',
+            'starter_code': 'n = int(input())\n# Implement Trie here\n',
+            'test_cases': [('5\nINSERT apple\nSEARCH apple\nSEARCH app\nINSERT app\nSEARCH app', 'True\nFalse\nTrue')],
+            'hints': ['A Trie node has a dict of children and a boolean is_end.'],
+        },
+        {
+            'title': 'Generator Pipeline',
+            'description': 'Create a pipeline: generate numbers 1..10, filter evens, square them, sum the results. Print the sum.',
+            'starter_code': '# Use generators (yield)\n',
+            'test_cases': [('', '220')],
+            'hints': ['Even numbers 1..10: 2,4,6,8,10. Squared: 4,16,36,64,100. Sum=220.'],
+        },
+        {
+            'title': 'Context Manager Timer',
+            'description': 'Write a Timer context manager using __enter__ and __exit__. It should print elapsed time in ms as an integer.',
+            'starter_code': 'import time\n\nclass Timer:\n    def __enter__(self):\n        self.start = time.time()\n        return self\n    def __exit__(self, *args):\n        pass  # print elapsed ms\n\nwith Timer():\n    total = sum(range(1000))\n',
+            'test_cases': [],
+            'hints': ['In __exit__, compute int((time.time() - self.start) * 1000) and print it.'],
+        },
+        {
+            'title': 'Regex Pattern Match',
+            'description': 'Implement pattern matching with . (any char) and * (zero or more of prev char). Print True/False. Do not use the re module.',
+            'starter_code': 's = input()\np = input()\n# Implement without re module\n',
+            'test_cases': [('aa\na*', 'True'), ('ab\n.*', 'True'), ('aab\nc*a*b', 'True'), ('abc\na.c', 'True')],
+            'hints': ['Use recursion or DP.', 'Handle * by checking if pattern[1] == "*" and try 0 or more matches.'],
+        },
+        {
+            'title': 'Async Producer Consumer',
+            'description': 'Use asyncio to simulate a producer that generates numbers 0-4 and a consumer that prints them doubled. Print each result on its own line.',
+            'starter_code': 'import asyncio\n\nasync def producer(queue):\n    for i in range(5):\n        await queue.put(i)\n    await queue.put(None)\n\nasync def consumer(queue):\n    while True:\n        item = await queue.get()\n        if item is None:\n            break\n        pass  # print item doubled\n\nasync def main():\n    queue = asyncio.Queue()\n    await asyncio.gather(producer(queue), consumer(queue))\n\nasyncio.run(main())\n',
+            'test_cases': [('', '0\n2\n4\n6\n8')],
+            'hints': ['In consumer, print item * 2 for each item received.'],
+        },
+        {
+    'title': 'Word Ladder Length',
+    'description': 'Read begin word, end word, and N dictionary words (first line begin, second end, third N, then N words). Find the shortest transformation sequence length (each step changes one letter). Print 0 if impossible.',
+    'starter_code': 'from collections import deque\nbegin = input()\nend = input()\nn = int(input())\nwords = set(input() for _ in range(n))\n# BFS word ladder\n',
+    'test_cases': [('hit\ncog\n6\nhot\ndot\ndog\nlot\nlog\ncog', '5')],
+    'hints': ['BFS where each neighbor changes exactly one character.', 'Try replacing each character with a-z and check if result is in word set.'],
+    },
+    {
+        'title': 'Serialize and Deserialize BST',
+        'description': 'Read N integers representing BST insert order (first line N, then values). Serialize to a string and deserialize back. Print the in-order traversal of the deserialized tree.',
+        'starter_code': 'n = int(input())\nvals = list(map(int, input().split()))\n# Build BST, serialize, deserialize, print inorder\n',
+        'test_cases': [('5\n5 3 7 1 4', '1 3 4 5 7')],
+        'hints': ['Build a BST with insert.', 'Preorder traversal is a natural serialization for BSTs.'],
+    },
+    {
+        'title': 'Knapsack 0/1',
+        'description': 'Read capacity W, then N items (first line W, second N, then N lines of "weight value"). Print the maximum value achievable without exceeding W.',
+        'starter_code': 'w = int(input())\nn = int(input())\nitems = [tuple(map(int, input().split())) for _ in range(n)]\n# 0/1 Knapsack DP\n',
+        'test_cases': [('10\n4\n5 60\n3 50\n4 70\n2 30', '180')],
+        'hints': ['Use 2D DP: dp[i][w] = max value using first i items with capacity w.', 'Or optimize to 1D by iterating capacity backwards.'],
+    },
+    {
+        'title': 'Top K Frequent Words',
+        'description': 'Read N words (one per line, first line is N). Print the K most frequent words in decreasing order of frequency, ties broken alphabetically. K is on the last line.',
+        'starter_code': 'from collections import Counter\nn = int(input())\nwords = [input() for _ in range(n)]\nk = int(input())\n# Top K frequent\n',
+        'test_cases': [('8\ni\nlove\nleetcode\ni\nlove\ncoding\ni\ni\n2', 'i\nlove')],
+        'hints': ['Count frequencies with Counter.', 'Sort by (-count, word) to handle ties alphabetically.'],
+    },
+    {
+        'title': 'Median of Two Sorted Arrays',
+        'description': 'Read two sorted arrays (space-separated, one per line). Print the median of the merged array. If even length, print average as float with 1 decimal.',
+        'starter_code': 'a = list(map(int, input().split()))\nb = list(map(int, input().split()))\n# Find median\n',
+        'test_cases': [('1 3\n2', '2.0'), ('1 2\n3 4', '2.5')],
+        'hints': ['The simple approach: merge, sort, find middle.', 'For O(log(m+n)): use binary search on the smaller array.'],
+    },
+    {
+        'title': 'Implement Min Stack',
+        'description': 'Implement a stack supporting PUSH x, POP, TOP (print top), and MIN (print minimum). Process N operations.',
+        'starter_code': 'n = int(input())\n# Implement MinStack\n',
+        'test_cases': [('6\nPUSH -2\nPUSH 0\nPUSH -3\nMIN\nPOP\nMIN', '-3\n-2')],
+        'hints': ['Use two stacks: one for values, one for current minimums.', 'When pushing, also push min(new_val, current_min) onto the min stack.'],
+    },
+    {
+        'title': 'Longest Palindromic Substring',
+        'description': 'Read a string and print the longest palindromic substring. If multiple of same length, print the first one.',
+        'starter_code': 's = input()\n# Find longest palindromic substring\n',
+        'test_cases': [('babad', 'bab'), ('cbbd', 'bb'), ('racecar', 'racecar')],
+        'hints': ['Expand around each center (both odd and even length).', 'For each center, expand while characters match.'],
+    },
+    {
+        'title': 'N-Queens Count',
+        'description': 'Read N. Print the number of ways to place N non-attacking queens on an N×N board.',
+        'starter_code': 'n = int(input())\n# Count N-Queens solutions\n',
+        'test_cases': [('4', '2'), ('8', '92'), ('1', '1')],
+        'hints': ['Use backtracking.', 'Track occupied columns and diagonals (col, row+col, row-col) for O(1) conflict checking.'],
+    },
+    {
+        'title': 'Alien Dictionary',
+        'description': 'Read N words in alien language order (first line N, then words). Print the unique character order or "INVALID" if contradictory.',
+        'starter_code': 'from collections import defaultdict, deque\nn = int(input())\nwords = [input() for _ in range(n)]\n# Topological sort\n',
+        'test_cases': [('4\nwrt\nwrf\ner\nett', 'wertf'), ('2\nz\nz', 'z')],
+        'hints': ['Compare adjacent words to extract ordering edges.', 'Run topological sort (Kahn\'s algorithm) on the resulting DAG.'],
+    },
+    {
+        'title': 'Sliding Window Rate Limiter',
+        'description': 'Simulate a rate limiter: read limit L and window W (seconds) on line 1, then N requests as timestamps (one per line). Print ALLOW or DENY for each.',
+        'starter_code': 'from collections import deque\nl, w = map(int, input().split())\nn = int(input())\nwindow = deque()\nfor _ in range(n):\n    t = int(input())\n    # Decide ALLOW or DENY\n    pass\n',
+        'test_cases': [('3 10\n5\n1\n2\n3\n11\n12', 'ALLOW\nALLOW\nALLOW\nALLOW\nALLOW')],
+        'hints': ['Remove timestamps outside the window before checking count.', 'If queue length < limit, allow and append.'],
+    },
+    {
+        'title': 'Expression Evaluator',
+        'description': 'Evaluate a basic arithmetic expression string with +, -, *, / and parentheses. Print the integer result (truncate toward zero for division).',
+        'starter_code': 's = input()\n# Evaluate expression without eval()\n',
+        'test_cases': [('3+2*2', '7'), ('(2+3)*4', '20'), ('100/10/2', '5')],
+        'hints': ['Use two stacks: one for numbers, one for operators.', 'Handle precedence by processing * and / immediately.'],
+    },
+    {
+        'title': 'Course Schedule (Cycle Detection)',
+        'description': 'Read N courses and M prerequisites (first line N M, then M lines "a b" meaning b must come before a). Print True if all courses can be finished, False if there is a cycle.',
+        'starter_code': 'from collections import deque\nn, m = map(int, input().split())\n# Build graph and detect cycle\n',
+        'test_cases': [('2 1\n1 0', 'True'), ('2 2\n1 0\n0 1', 'False')],
+        'hints': ['Use topological sort (Kahn\'s algorithm).', 'If all nodes are processed, no cycle exists.'],
+    },
+    {
+        'title': 'Implement HashMap',
+        'description': 'Implement a HashMap without using dict. Support PUT key value, GET key (print value or -1), REMOVE key. Read N operations.',
+        'starter_code': 'n = int(input())\n# Implement HashMap using array + chaining\n',
+        'test_cases': [('5\nPUT 1 10\nPUT 2 20\nGET 1\nREMOVE 2\nGET 2', '10\n-1')],
+        'hints': ['Use an array of buckets (size 1009 is a good prime).', 'Use chaining: each bucket is a list of (key, value) pairs.'],
+    },
+    {
+        'title': 'Maximum Profit with Cooldown',
+        'description': 'Read space-separated stock prices. Find the maximum profit with the constraint that after selling you must wait 1 day before buying again.',
+        'starter_code': 'prices = list(map(int, input().split()))\n# DP with cooldown state\n',
+        'test_cases': [('1 2 3 0 2', '3'), ('1', '0')],
+        'hints': ['Track three states: held, sold (just sold), rest.', 'held = max(held, rest - price); sold = held + price; rest = max(rest, sold).'],
+    },
+    {
+        'title': 'Palindrome Partitioning Count',
+        'description': 'Read a string. Print the minimum number of cuts needed so every substring in the partition is a palindrome.',
+        'starter_code': 's = input()\n# Minimum palindrome cuts DP\n',
+        'test_cases': [('aab', '1'), ('a', '0'), ('ab', '1'), ('aba', '0')],
+        'hints': ['Use two DPs: one to check if s[i:j] is a palindrome, one for min cuts.', 'dp[i] = min cuts for s[:i+1].'],
+    },
+    ],
+}
+
+
+class Command(BaseCommand):
+    help = 'Seed the database with levels and questions'
+
+    def handle(self, *args, **kwargs):
+        level_data = [
+            ('beginner', 'Beginner', 'Master Python fundamentals: variables, loops, functions, and basic data structures.', 1, '#10b981', '🐣'),
+            ('intermediate', 'Intermediate', 'Level up with algorithms, data structures, and problem-solving patterns.', 2, '#3b82f6', '🚀'),
+            ('advanced', 'Advanced', 'Tackle complex algorithms, design patterns, async programming and more.', 3, '#8b5cf6', '⚡'),
+        ]
+
+        for slug, name, desc, order, color, icon in level_data:
+            level, _ = Level.objects.get_or_create(slug=slug, defaults={
+                'name': name, 'description': desc,
+                'order': order, 'color': color, 'icon': icon
+            })
+            questions = QUESTIONS.get(slug, [])
+            for i, q in enumerate(questions, start=1):
+                question, created = Question.objects.get_or_create(
+                    level=level, order=i,
+                    defaults={
+                        'title': q['title'],
+                        'description': q['description'],
+                        'starter_code': q.get('starter_code', '# Write your solution here\n'),
+                        'points': 100,
+                    }
+                )
+                if created:
+                    for j, (inp, out) in enumerate(q.get('test_cases', [])):
+                        TestCase.objects.create(
+                            question=question, input_data=inp,
+                            expected_output=out, order=j
+                        )
+                    for k, hint_text in enumerate(q.get('hints', []), start=1):
+                        Hint.objects.create(question=question, content=hint_text, order=k)
+            self.stdout.write(f'  ✓ {name}: {len(questions)} questions seeded')
+
+        self.stdout.write(self.style.SUCCESS('\nDatabase seeded successfully!'))

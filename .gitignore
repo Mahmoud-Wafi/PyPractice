@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.so
+.venv/
+venv/
+env/
+
+# Django
+*.log
+db.sqlite3
+/backend/staticfiles/
+/backend/media/
+/backend/.env
+
+# Node / React
+node_modules/
+/frontend/build/
+/frontend/.env
+/frontend/.env.local
+/frontend/.env.production
+
+# Docker
+.docker/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Secrets
+*.pem
+*.key
+.env
+.env.*
+!.env.example
+!*.env.example

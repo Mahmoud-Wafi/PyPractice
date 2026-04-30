@@ -1,0 +1,71 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: pylearn
+      POSTGRES_USER: pylearn
+      POSTGRES_PASSWORD: pylearn_secret
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pylearn"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build: ./backend
+    environment:
+      - DEBUG=0
+      - DATABASE_URL=postgresql://pylearn:pylearn_secret@db:5432/pylearn
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=change-me-in-production-use-long-random-string
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ALLOWED_HOSTS=*
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py seed &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4"
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+
+  celery:
+    build: ./backend
+    environment:
+      - DATABASE_URL=postgresql://pylearn:pylearn_secret@db:5432/pylearn
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=change-me-in-production-use-long-random-string
+    depends_on:
+      - backend
+      - redis
+    command: celery -A config worker -l info -c 4
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  redis_data:
